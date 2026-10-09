@@ -16,12 +16,12 @@ FLEX disk images are in the companion project,
 
 | Folder | Contents |
 |---|---|
-| `monitor/` | `Assist09-Flex.asm` — the modified Assist09 monitor: boots FLEX, reads the RTC and sets FLEX's date, and has the `K` command to set the clock |
+| `monitor/` | `Assist09-Flex.asm` — the modified Assist09 monitor: boots FLEX, reads the RTC and sets FLEX's date, and adds the `F`, `X`, `U` and `K` commands |
 | `rtc/` | RTC support: `Assist09_Flex_RTC.asm` (date sync and 1-minute interrupt, called from the monitor), `Flex_DatePatch.asm` (stops FLEX asking for the date), `RTC_Set.asm` (the clock-setting program run by `K`), and RTC test programs |
 | `flex-bios/` | `Flex_BIOS.asm` — FLEX's disk and console drivers for the CF card and serial port; `Flex_BIOS_DiskLoader.asm` — receives a FLEX disk image over serial and writes it to the card; `inch_outch_test.asm` — console I/O test |
 | `cf-tools/` | `FlexFormat.asm` — formats a FLEX disk on the CF card; `CF_Test_4.asm` — CF card exerciser |
 | `rom-images/` | The programmed ROM image (v6) as `.bin` and `.hex` |
-| `docs/` | `xbasic-patching.md`, and a spreadsheet of the commands added to the monitor |
+| `docs/` | `monitor-commands.md` (the added commands), `xbasic-patching.md`, and a spreadsheet of the added commands |
 
 Each source file has a header comment saying what it does and where it lives
 in memory. The `.hex` / `.s19` files are assembler output kept for convenience.
@@ -58,8 +58,11 @@ a TL866 programmer to burn the ROM.
 ## Bring-up order
 
 1. Burn the ROM image (`rom-images/`) and check the monitor prompt on the serial console.
-2. Download `Flex_BIOS`, then `FlexFormat` to format the CF card (or load a disk image with `Flex_BIOS_DiskLoader` and the Disk Image tool in A09Studio).
-3. Use `K` in the monitor to set the clock, then boot FLEX with the monitor's `F` command. The monitor sets FLEX's date from the RTC.
+2. Format the CF card with the monitor's `X` command, or send a whole disk image to it with `U` and the Disk Image tool in A09Studio.
+3. Use `K` to set the clock, then boot FLEX with `F`. The monitor sets FLEX's date from the RTC.
+
+The monitor's added commands (`F`, `X`, `U`, `K`) are described in
+[docs/monitor-commands.md](docs/monitor-commands.md).
 
 ## Using TSC Extended BASIC
 
