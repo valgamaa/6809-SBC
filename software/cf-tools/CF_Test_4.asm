@@ -268,7 +268,7 @@ INITCF	LDX		#CFADDRESS
 		LDB		LBA2
 		STB		CFLBA2, X
 		JSR		CMDWAIT
-		LDB		#LBA3
+		LDB		LBA3
 		ANDB	#$0F			; Mask the lower nibble
 		ORB		#$E0			; Set LBA mode, IDE master
 		STB		CFLBA3, X
@@ -424,19 +424,35 @@ READFLX	PSHS	Y,X,B,A
 		LDA		LBA2
 		STA		CFLBA2, Y		; Load the drive number
 		JSR		CFWAIT
-		LDA		#$E0
-		STA		CFLBA3, Y		
+		LDA		LBA3
 		ANDA	#$0F			; Mask the lower nibble
 		ORA		#$E0			; Set LBA mode, IDE master
-		JSR		CFWAIT			; The wanted sector is selected, and can now be read.	
+		STA		CFLBA3, Y
+		JSR		CFWAIT			; The wanted sector is selected, and can now be read.
+		LDA		#$01			; Sector count -- READCF/WRTFLX both set this
+		STA		CFSECCNT, Y		; before their transfer; this was missing here.
+		JSR		CFWAIT			; A stale count left over from a prior command
+									; (sector count decrements as sectors transfer,
+									; so $00 = 256 sectors on legacy ATA) would make
+									; the drive treat this as a multi-sector read.
 		LDA		#$20			; Send read command to the CF Card
 		STA		CFCOMMAND, Y
-		JSR		CFWAIT		
+		JSR		DRQWAIT			; Wait for Busy=0 AND DRQ=1 before the
+									; first data byte
 		LDA		#$00			; Set a loop counter to read the first 256 bytes of DATA
-		LDX		#DATABLK		
-FLEXLP	JSR		DATWAIT
-		LDA		CFDATA, Y		; Read the data byte
-		STA		,X+				; Write it to the buffer	
+		LDX		#DATABLK
+FLEXLP	JSR		DRQWAIT			; Re-check DRQ before every byte, not just
+									; the first -- this board's CF interface
+									; appears to drop DRQ momentarily partway
+									; through a sector (a shallow FIFO refill?),
+									; and DATWAIT alone (Busy only) never caught
+									; that, so the tail of the sector was read as
+									; stale/floating bus values.
+		LDB		CFDATA, Y		; Read the data byte -- B, not A: A is the
+		STB		,X+				; loop counter, and reusing it for the data
+									; byte clobbered the count, so the loop
+									; actually ran until it read a $FF byte from
+									; the card instead of for a fixed 256 bytes
 		INCA
 		BNE		FLEXLP			; Count to 256 - a Flex sector
 RDTAIL	JSR		DATWAIT
@@ -464,9 +480,9 @@ WRITECF	PSHS	Y,X,B,A
 		STA		CFLBA2, X
 		JSR		CMDWAIT
 		LDA		LBA3
-		STA		CFLBA3, X
 		ANDA	#$0F			; Mask the lower nibble
 		ORA		#$E0			; Set LBA mode, IDE master
+		STA		CFLBA3, X
 		JSR		CMDWAIT
 		LDA		#$01
 		STA		CFSECCNT, X
@@ -502,17 +518,18 @@ WRTFLX	PSHS	Y,X,B,A
 		LDB		LBA2
 		STB		CFLBA2, Y		; Load the drive number
 		JSR		CFWAIT
-		LDB		#$E0
-		STB		CFLBA3, Y
+		LDB		LBA3
 		ANDB	#$0F			; Mask the lower nibble
 		ORB		#$E0			; Set LBA mode, IDE master
-		JSR		CFWAIT			; The wanted sector is selected, and can now be written to.	
+		STB		CFLBA3, Y
+		JSR		CFWAIT			; The wanted sector is selected, and can now be written to.
 		LDB		#$01
 		STB		CFSECCNT, X
 		JSR		CMDWAIT
-		LDB		#$30			; Send read command to the CF Card
+		LDB		#$30			; Send write command to the CF Card
 		STB		CFCOMMAND, Y
-		JSR		CFWAIT		
+		JSR		DRQWAIT			; Wait for Busy=0 AND DRQ=1 before the
+									; first data byte
 		LDA		#$00			; Set a loop counter to write the first 256 bytes of DATA
 		LDX		#DATABLK		; Point to the start of the memory block
 WRFLOOP	JSR		DATWAIT
@@ -598,9 +615,11 @@ FTRACK	PSHS	A,B,Y
 * Quit the application
 ****************************************************
 QUIT	LDX		#NEWLINE
-        SWI 
-        FCB     PDATA 
-		RTS        
+        SWI
+        FCB     PDATA
+		JMP		$E03C		; Return straight to the Assist09 monitor --
+							; RTS relied on a return address the G command
+							; doesn't actually push, which crashed
         
 ****************************************************
 * Wait for CF Card ready when reading/writing to CF Card
@@ -638,7 +657,22 @@ CFWAIT1	LDB		CFSTATUSL	 	; Read the status register
 DATWAIT	LDB		CFSTATUSL	 	; Read the status register
 		BITB	#$80			; Isolate the ready bit
 		BNE		DATWAIT			; Wait for the bit to clear
-		RTS        
+		RTS
+
+****************************************************
+* Wait for the CF Card to be ready to accept/deliver
+* data -- Busy (bit 7) clear AND DRQ (bit 3) set.
+* Needed once, right after issuing a data-transfer
+* command (read or write) and before the first byte,
+* since CFWAIT/DATWAIT/CMDWAIT never check DRQ at all.
+****************************************************
+DRQWAIT	LDB		CFSTATUSL
+		BITB	#$80
+		BNE		DRQWAIT
+		LDB		CFSTATUSL
+		BITB	#$08
+		BEQ		DRQWAIT
+		RTS
 
 ****************************************************
 * Wait for CF Card ready when reading/writing to CF Card
