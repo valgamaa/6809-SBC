@@ -21,7 +21,7 @@ FLEX disk images are in the companion project,
 | `flex-bios/` | `Flex_BIOS.asm` — FLEX's disk and console drivers for the CF card and serial port; `Flex_BIOS_DiskLoader.asm` — receives a FLEX disk image over serial and writes it to the card; `inch_outch_test.asm` — console I/O test |
 | `cf-tools/` | `FlexFormat.asm` — formats a FLEX disk on the CF card; `CF_Test_4.asm` — CF card exerciser |
 | `rom-images/` | The programmed ROM image (v6) as `.bin` and `.hex` |
-| `docs/` | `monitor-commands.md` (the added commands), `xbasic-patching.md`, and a spreadsheet of the added commands |
+| `docs/` | `monitor-commands.md` / [PDF](docs/monitor-commands.pdf) (the added commands), `xbasic-patching.md`, and a spreadsheet of the added commands |
 
 Each source file has a header comment saying what it does and where it lives
 in memory. The `.hex` / `.s19` files are assembler output kept for convenience.
