@@ -14,8 +14,13 @@ better information about its terms, please open an issue.
 ## FLEX and TSC software
 
 The ROM image in `software/rom-images/` includes the FLEX 9.1 operating
-system code (`FLEX-core.hex`). TSC placed FLEX in the public domain, so it is
-included here. TSC Extended BASIC (`XBASIC`) and other TSC utilities are
+system code (`FLEX-core.hex`). Dave Shirk, the TSC copyright holder, has given
+permission for FLEX to be used freely, including commercially, on the one
+condition that he is told of, or sent a copy of, anything done with it
+(see the [FLEX User Group page](http://www.flexusergroup.com/flexusergroup/fug7.htm)).
+That permission is for FLEX itself; it is not a public-domain dedication and
+it does not change the MIT licence on the rest of this repository.
+TSC Extended BASIC (`XBASIC`) and other TSC utilities are
 not part of this repository and are not covered by its licence. The files here
 that work with FLEX (`Flex_BIOS`, `FlexFormat` and others) are original code
 written to fit FLEX's published interfaces.
