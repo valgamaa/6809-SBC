@@ -1,0 +1,10 @@
+.DS_Store
+
+# Abandoned KiCad experiment (the Eagle files are the real design)
+hardware/*.kicad_*
+hardware/*-backups/
+hardware/*.pretty/
+hardware/6809 EXPANDED V6 SBC/
+hardware/fp-info-cache
+hardware/fp-lib-table
+hardware/sym-lib-table
