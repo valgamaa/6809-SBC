@@ -79,7 +79,7 @@ repository.
 
 **2. Merge and burn** in A09Studio's **TL866 Programmer** form:
 
-1. Choose the programmer and type the chip into **Chip** (it must be a 32 KB device).
+1. Choose the programmer and type the chip into **Chip**. The board uses a 28C256 (32 KB EEPROM); pick the entry for your manufacturer's part from the list.
 2. Set **PROM Base 0x** to `8000`. This is subtracted from every file's addresses so they land at the start of the chip.
 3. Click **Add Files…** and add the eight `.hex` files above. Leave each file's **Base** at `0000`.
 4. Click **Write**, then **Verify**.
