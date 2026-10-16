@@ -20,7 +20,7 @@ FLEX disk images are in the companion project,
 | `rtc/` | RTC support: `Assist09_Flex_RTC.asm` (date sync and 1-minute interrupt, called from the monitor), `Flex_DatePatch.asm` (stops FLEX asking for the date), `RTC_Set.asm` (the clock-setting program run by `K`), `TIME.asm` / `TIME.CMD` (a FLEX command that prints the RTC time and date), and RTC test programs |
 | `flex-bios/` | `Flex_BIOS.asm` — FLEX's disk and console drivers for the CF card and serial port; `Flex_BIOS_DiskLoader.asm` — receives a FLEX disk image over serial and writes it to the card; `inch_outch_test.asm` — console I/O test |
 | `cf-tools/` | `FlexFormat.asm` — formats a FLEX disk on the CF card; `CF_Test_4.asm` — CF card exerciser |
-| `rom-images/` | The programmed ROM image (v6) as `.bin` and `.hex` |
+| `rom-images/` | The programmed ROM image (v6) as `.bin` and `.hex`, and `FLEX-core.hex` — the FLEX part of it, used to rebuild the image |
 | `docs/` | `monitor-commands.md` / [PDF](docs/monitor-commands.pdf) (the added commands), `xbasic-patching.md`, and a spreadsheet of the added commands |
 
 Each source file has a header comment saying what it does and where it lives
@@ -52,8 +52,45 @@ a09 -xFlex_BIOS.hex -lFlex_BIOS.lst Flex_BIOS.asm
 A09Studio wraps the same assembler with an editor and a terminal, and drives
 a TL866 programmer to burn the ROM.
 
-> TODO: add step-by-step instructions for assembling the pieces into the
-> combined ROM image and burning it.
+## Building and burning the ROM image
+
+The ROM image is 32 KB and sits at `$8000`-`$FFFF` in the board's memory map,
+so the chip's own addresses are the board's minus `$8000`. The programmed
+image (`rom-images/Monolithic-Flex-Assist09-BIOS-Format-Loader_v6`) is made
+from eight Intel hex files that never overlap:
+
+| File | Contents | Address |
+|---|---|---|
+| `monitor/Assist09-Flex.hex` | the modified Assist09 monitor | `$E000`-`$FFFF` |
+| `rtc/Assist09_Flex_RTC.hex` | RTC date sync and 1-minute interrupt | `$FB00`-`$FD10` |
+| `flex-bios/Flex_BIOS.hex` | FLEX disk and console drivers | `$D3E5`-`$FA85` |
+| `flex-bios/Flex_BIOS_DiskLoader.hex` | serial-to-CF disk loader (`U`) | `$EE00`-`$EEBE` |
+| `cf-tools/FlexFormat.hex` | CF formatter (`X`) | `$E900`-`$EDB8` |
+| `rtc/Flex_DatePatch.hex` | stops FLEX asking for the date | `$CA50`-`$CA55` |
+| `rtc/RTC_Set.hex` | the clock-setting program run by `K` | `$C000`-`$C558` |
+| `rom-images/FLEX-core.hex` | the FLEX 9.1 code and tables the pieces above don't replace | `$C559`-`$FFEF`, in several ranges |
+
+At reset the monitor copies the ROM to RAM, which is why the code runs at
+these addresses.
+
+**1. Assemble** whichever source file you changed (in A09Studio, or with
+`a09 -x<name>.hex <name>.asm`). The other `.hex` files are already in the
+repository.
+
+**2. Merge and burn** in A09Studio's **TL866 Programmer** form:
+
+1. Choose the programmer and type the chip into **Chip** (it must be a 32 KB device).
+2. Set **PROM Base 0x** to `8000`. This is subtracted from every file's addresses so they land at the start of the chip.
+3. Click **Add Files…** and add the eight `.hex` files above. Leave each file's **Base** at `0000`.
+4. Click **Write**, then **Verify**.
+
+With more than one file, or a non-zero base, A09Studio merges the files with
+`srec_cat` (`brew install srecord`) before sending them to `minipro`
+(`brew install minipro`). Unused addresses are left at `$FF`. If you change a
+file so that it overlaps another, the merge will fail rather than silently
+overwrite.
+
+The merged result matches the v6 image in `rom-images/` byte for byte.
 
 ## Bring-up order
 
