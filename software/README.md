@@ -17,7 +17,7 @@ FLEX disk images are in the companion project,
 | Folder | Contents |
 |---|---|
 | `monitor/` | `Assist09-Flex.asm` — the modified Assist09 monitor: boots FLEX, reads the RTC and sets FLEX's date, and adds the `F`, `X`, `U` and `K` commands |
-| `rtc/` | RTC support: `Assist09_Flex_RTC.asm` (date sync and 1-minute interrupt, called from the monitor), `Flex_DatePatch.asm` (stops FLEX asking for the date), `RTC_Set.asm` (the clock-setting program run by `K`), and RTC test programs |
+| `rtc/` | RTC support: `Assist09_Flex_RTC.asm` (date sync and 1-minute interrupt, called from the monitor), `Flex_DatePatch.asm` (stops FLEX asking for the date), `RTC_Set.asm` (the clock-setting program run by `K`), `TIME.asm` / `TIME.CMD` (a FLEX command that prints the RTC time and date), and RTC test programs |
 | `flex-bios/` | `Flex_BIOS.asm` — FLEX's disk and console drivers for the CF card and serial port; `Flex_BIOS_DiskLoader.asm` — receives a FLEX disk image over serial and writes it to the card; `inch_outch_test.asm` — console I/O test |
 | `cf-tools/` | `FlexFormat.asm` — formats a FLEX disk on the CF card; `CF_Test_4.asm` — CF card exerciser |
 | `rom-images/` | The programmed ROM image (v6) as `.bin` and `.hex` |
