@@ -52,6 +52,34 @@ and returns to FLEX when it finishes. To rebuild it:
 a09 -FPI.CMD PI.asm
 ```
 
+## For comparison: the same method on a Mac
+
+[`mac/PiMac.swift`](mac/PiMac.swift) is a small SwiftUI app that runs exactly
+the same algorithm as `PI.CMD`: one decimal digit per byte, short division,
+the leading-zero skip, the 1/239 pattern and six guard digits. It shows the
+digits in a window and can save them to a text file.
+
+It is deliberately not tuned for the Mac. It uses one thread, no SIMD, no
+multi-digit words and no faster formula. So the comparison measures the
+hardware running the 6809's algorithm, not how fast a Mac can compute π.
+Specialised programs using many digits per word and FFT multiplication
+reach 100,000 digits in milliseconds.
+
+| Digits | PI.CMD, 6809 at 2 MHz | PiMac, Apple Silicon Mac | Ratio |
+|---|---|---|---|
+| 1,000 | 2:20 (measured) | ≈ 5 ms (scaled from below) | ≈ 29,000× |
+| 100,000 | ≈ 16 days (est.; beyond PI.CMD's 65,529-digit limit) | 48 s (measured) | ≈ 29,000× |
+
+The ratio is the same at both sizes because the work grows with the square
+of the digit count on both machines.
+
+Build and run it with the Xcode command-line tools, no project needed:
+
+```
+swiftc -O -parse-as-library PiMac.swift -o PiMac
+./PiMac
+```
+
 ## Paged memory
 
 All versions use the board's 4 KB paging window. Two things matter:
