@@ -21,6 +21,7 @@ FLEX disk images are in the companion project,
 | `flex-bios/` | `Flex_BIOS.asm` — FLEX's disk and console drivers for the CF card and serial port; `Flex_BIOS_DiskLoader.asm` — receives a FLEX disk image over serial and writes it to the card; `inch_outch_test.asm` — console I/O test |
 | `cf-tools/` | `FlexFormat.asm` — formats a FLEX disk on the CF card; `CF_Test_4.asm` — CF card exerciser |
 | `rom-images/` | The programmed ROM image (v6) as `.bin` and `.hex`, and `FLEX-core.hex` — the FLEX part of it, used to rebuild the image |
+| `pi/` | π by Machin's formula, in five versions from pure TSC XBASIC to a native FLEX command (`PI.CMD`), with a [PDF](pi/Pi_6809_Progression.pdf) explaining each step and its timing — see [pi/README.md](pi/README.md) |
 | `docs/` | `monitor-commands.md` / [PDF](docs/monitor-commands.pdf) (the added commands), `xbasic-patching.md`, and a spreadsheet of the added commands |
 
 Each source file has a header comment saying what it does and where it lives
@@ -35,6 +36,8 @@ in memory. The `.hex` / `.s19` files are assembler output kept for convenience.
 | `$F278` | MC6859 (responds in the top 8 bytes of its decode window) |
 | `$F2C0`, `$F300` | CompactFlash register blocks |
 | `$F340` | MC68681 DUART, port A (console) |
+| `$F280` | 4K page register, write only (a read latches the data bus); block 14 at reset |
+| `$E000`–`$EFFF` | 4K paging window onto any of the 128 RAM blocks |
 
 Software entry points and load addresses (for example `Flex_BIOS` at `$F800`
 with its disk vector table at `$DE00`, the RTC sync routine at `$FB00`, and the
