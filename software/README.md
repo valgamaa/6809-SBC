@@ -21,6 +21,7 @@ FLEX disk images are in the companion project,
 | `flex-bios/` | `Flex_BIOS.asm` — FLEX's disk and console drivers for the CF card and serial port; `Flex_BIOS_DiskLoader.asm` — receives a FLEX disk image over serial and writes it to the card; `inch_outch_test.asm` — console I/O test |
 | `cf-tools/` | `FlexFormat.asm` — formats a FLEX disk on the CF card; `CF_Test_4.asm` — CF card exerciser |
 | `rom-images/` | The programmed ROM image (v6) as `.bin` and `.hex`, and `FLEX-core.hex` — the FLEX part of it, used to rebuild the image |
+| `des/` | `DESFILE` — encrypts and decrypts FLEX text files with the MC6859 DES chip, as a TSC XBASIC program and as a native FLEX command — see [des/README.md](des/README.md) |
 | `pi/` | π by Machin's formula, in five versions from pure TSC XBASIC to a native FLEX command (`PI.CMD`), with a [PDF](pi/Pi_6809_Progression.pdf) explaining each step and its timing — see [pi/README.md](pi/README.md) |
 | `docs/` | `monitor-commands.md` / [PDF](docs/monitor-commands.pdf) (the added commands), `xbasic-patching.md`, and a spreadsheet of the added commands |
 
