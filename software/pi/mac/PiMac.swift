@@ -142,7 +142,7 @@ struct ContentView: View {
     @State private var lastDigits = 0
     @State private var lastSeconds = 0.0
 
-    static let maxDigits = 100_000
+    static let maxDigits = 1_000_000
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

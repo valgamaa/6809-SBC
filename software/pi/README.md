@@ -69,9 +69,15 @@ reach 100,000 digits in milliseconds.
 |---|---|---|---|
 | 1,000 | 2:20 (measured) | ≈ 5 ms (scaled from below) | ≈ 29,000× |
 | 100,000 | ≈ 16 days (est.; beyond PI.CMD's 65,529-digit limit) | 48 s (measured) | ≈ 29,000× |
+| 1,000,000 | ≈ 4½ years (est.) | 3.5 h (measured) | ≈ 11,000× |
 
-The ratio is the same at both sizes because the work grows with the square
-of the digit count on both machines.
+Up to 100,000 digits the ratio stays the same, because the work grows with
+the square of the digit count on both machines. At a million digits the Mac
+took about 2½ times longer than that scaling predicts. The likely causes are
+the 1 MB digit buffers no longer fitting in the fastest caches, and macOS
+moving a long job in a background window onto its slower efficiency cores.
+Which of these mattered hasn't been checked. The 6809 has no such effects,
+since every byte of its memory takes the same time to reach.
 
 Build and run it with the Xcode command-line tools, no project needed:
 
