@@ -23,7 +23,7 @@ are to that file (the version dated 14 August 2013).
 |---|---|
 | `$0000`–`$0216` | BASIC's variables, line buffer and stack |
 | `$0217`–`$9BFF` | your program, its variables and strings (about 39 KB) |
-| `$9C00`–`$BFEA` | BASIC (`$9C00` is its entry point, a `JMP`) |
+| `$9C00`–`$BFF3` | BASIC (`$9C00` is its entry point, a `JMP`) |
 
 The ROM image has nothing else in `$8000`–`$BFFF`, so BASIC goes in as one
 more hex file. The monitor copies it to RAM at reset with the rest of the ROM.
@@ -55,7 +55,7 @@ more hex file. The monitor copies it to RAM at reset with the rest of the ROM.
    a09 -xExBasROM_SBC.hex -lExBasROM_SBC.lst ExBasROM_SBC.asm
    ```
 
-   The hex file should cover `$9C00`–`$BFEA` and nothing else.
+   The hex file should cover `$9C00`–`$BFF3` and nothing else.
 3. Add it as a ninth file in A09Studio's TL866 form, alongside the eight in
    the [README](../README.md#building-and-burning-the-rom-image), and write the
    chip.
@@ -257,6 +257,36 @@ BASEND    EQU  *
           END
 ```
 
+### 9. MEM as an unsigned number
+
+`MEM` converts the free byte count as a signed 16-bit number, which never
+mattered on a Color Computer with at most 32 KB free. With about 39 KB free
+here it prints `-26410`. Give it the unsigned conversion Microsoft uses at
+`LBDCC` to print line numbers: set the carry and enter the normaliser at
+`LBC86`. Replace
+
+```
+MEM       TFR  S,D            PUT STACK POINTER INTO ACCD
+          SUBD ARYEND         SUBTRACT END OF ARRAYS
+          FCB  SKP1           SKIP ONE BYTE
+```
+
+with
+
+```
+MEM       CLR  VALTYP         SET VARIABLE TYPE TO NUMERIC
+          TFR  S,D            PUT STACK POINTER INTO ACCD
+          SUBD ARYEND         SUBTRACT END OF ARRAYS
+          STD  FPA0           SAVE ACCD IN TOP OF FPA0
+          LDB  #$90           EXPONENT FOR AN INTEGER IN THE TOP HALF
+          COMA                SET CARRY - TREAT AS UNSIGNED (AS LBDCC)
+          JMP  LBC86          ZERO BOTTOM HALF AND SIGN, NORMALIZE
+```
+
+Leave the `LB4F3` line that follows; other code still uses it. `VARPTR` has
+the same quirk for variables above `$7FFF`, which is harmless because `PEEK`
+and `POKE` accept the negative form, so it is left alone.
+
 ## Testing
 
 After burning, check in this order:
@@ -269,3 +299,5 @@ After burning, check in this order:
 5. `FLEX` prints the date and time and starts FLEX; `MON` in FLEX returns to
    Assist09.
 6. `PRINT USING "$$##.##";12.5` checks change 7.
+7. `PRINT MEM` gives about `39126` on a cold start, not a negative number
+   (change 9).

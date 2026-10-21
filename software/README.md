@@ -101,7 +101,7 @@ overwrite.
 The merged result matches the v7 image in `rom-images/` byte for byte.
 
 To include Microsoft Extended BASIC, add the BASIC hex file you have built as
-a ninth file (`$9C00`-`$BFEA`). It is not part of this repository; see
+a ninth file (`$9C00`-`$BFF3`). It is not part of this repository; see
 [docs/basic-port.md](docs/basic-port.md) for how to make it from Grant
 Searle's source. Without it, the board starts in the monitor as before.
 
