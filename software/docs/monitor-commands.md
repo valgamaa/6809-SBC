@@ -3,7 +3,7 @@
 The monitor is Assist09 with four commands added. All of them use letters
 that stock Assist09 does not use (it already uses B, C, D, E, G, L, M, N, O,
 P, R, S, T, V and W). The ROM image is
-`rom-images/Monolithic-Flex-Assist09-BIOS-Format-Loader_v6`.
+`rom-images/Monolithic-Flex-Assist09-BIOS-Format-Loader_v7`.
 
 | Command | Name | Runs at | Source |
 |---|---|---|---|
@@ -55,10 +55,23 @@ prompt:
 
 After setting the clock, use `F` to boot FLEX with the new date.
 
+## Reset and entry points
+
+| Entry | Address | What it does |
+|---|---|---|
+| Reset | `BOOT` (reset vector) | Copies the ROM to RAM, switches the ROM off, masks the RTC interrupt and sets up the console. If BASIC is in the ROM (the byte at `$9C00` is `$7E`, a `JMP`), it starts BASIC; otherwise it starts Assist09. |
+| Monitor | `$E03C` | Enters Assist09. FLEX's `MON` command and the clock program's `Q` jump here. |
+| From BASIC | `[$FFF0]` (`MONENT`) | Rebuilds the monitor's work page, then enters Assist09 if `A`=0 or boots FLEX (as `F` does) if `A`=`'F'`. Used by BASIC's `MONITOR` and `FLEX` commands. |
+
+`$FFF0` is the 6809's reserved vector, which the CPU never uses, so it is free
+to hold this address. Reaching the monitor from BASIC this way means BASIC
+needs no addresses inside the monitor. BASIC itself is not part of this
+repository; see [basic-port.md](basic-port.md).
+
 ## Notes
 
 - The formatter, loader and clock program sit in ROM above or away from user
-  RAM, so `$0000`–`$BFFF` stays free. The clock program at `$C000` is
-  restored from the ROM image on every reset.
+  RAM, so `$0000`–`$BFFF` stays free (`$0000`–`$9BFF` if BASIC is in the ROM).
+  The clock program at `$C000` is restored from the ROM image on every reset.
 - The monitor masks the RTC interrupt at reset, so a cold power-up can't fire
   it before `F` has installed the handler.

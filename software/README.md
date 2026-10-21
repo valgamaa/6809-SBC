@@ -6,7 +6,9 @@ computer that runs **FLEX 9** from a CompactFlash card.
 The board: 6809 CPU, 1 MHz bus from a 4 MHz crystal, MC68681 DUART for the
 console, CompactFlash in 16-bit True IDE mode (low byte only), Epson
 RTC-72421/72423 real-time clock, and an MC6859 data-security device. The
-monitor is a modified **Assist09**; at reset it copies itself from ROM to RAM.
+monitor is a modified **Assist09**; at reset it copies itself from ROM to RAM,
+then starts Microsoft Extended BASIC if you have added it to the ROM (see
+[docs/basic-port.md](docs/basic-port.md)), or the monitor if not.
 
 The host-side tools for building these programs and for making and sending
 FLEX disk images are in the companion project,
@@ -16,14 +18,14 @@ FLEX disk images are in the companion project,
 
 | Folder | Contents |
 |---|---|
-| `monitor/` | `Assist09-Flex.asm` — the modified Assist09 monitor: boots FLEX, reads the RTC and sets FLEX's date, and adds the `F`, `X`, `U` and `K` commands |
+| `monitor/` | `Assist09-Flex.asm` — the modified Assist09 monitor: boots FLEX, reads the RTC and sets FLEX's date, adds the `F`, `X`, `U` and `K` commands, and starts BASIC at reset when it is in the ROM |
 | `rtc/` | RTC support: `Assist09_Flex_RTC.asm` (date sync and 1-minute interrupt, called from the monitor), `Flex_DatePatch.asm` (stops FLEX asking for the date), `RTC_Set.asm` (the clock-setting program run by `K`), `TIME.asm` / `TIME.CMD` (a FLEX command that prints the RTC time and date), and RTC test programs |
 | `flex-bios/` | `Flex_BIOS.asm` — FLEX's disk and console drivers for the CF card and serial port; `Flex_BIOS_DiskLoader.asm` — receives a FLEX disk image over serial and writes it to the card; `inch_outch_test.asm` — console I/O test |
 | `cf-tools/` | `FlexFormat.asm` — formats a FLEX disk on the CF card; `CF_Test_4.asm` — CF card exerciser |
-| `rom-images/` | The programmed ROM image (v6) as `.bin` and `.hex`, and `FLEX-core.hex` — the FLEX part of it, used to rebuild the image |
+| `rom-images/` | The ROM image (v7, without BASIC) as `.bin` and `.hex`, the previous v6 image, and `FLEX-core.hex` — the FLEX part of the image, used to rebuild it |
 | `des/` | `DESFILE` — encrypts and decrypts FLEX text files with the MC6859 DES chip, as a TSC XBASIC program and as a native FLEX command — see [des/README.md](des/README.md) |
 | `pi/` | π by Machin's formula, in five versions from pure TSC XBASIC to a native FLEX command (`PI.CMD`), with a [PDF](pi/Pi_6809_Progression.pdf) explaining each step and its timing — see [pi/README.md](pi/README.md) |
-| `docs/` | `monitor-commands.md` / [PDF](docs/monitor-commands.pdf) (the added commands), `xbasic-patching.md`, and a spreadsheet of the added commands |
+| `docs/` | `monitor-commands.md` / [PDF](docs/monitor-commands.pdf) (the added commands), `basic-port.md` (adding Microsoft Extended BASIC to the ROM), `xbasic-patching.md`, and a spreadsheet of the added commands |
 
 Each source file has a header comment saying what it does and where it lives
 in memory. The `.hex` / `.s19` files are assembler output kept for convenience.
@@ -39,6 +41,8 @@ in memory. The `.hex` / `.s19` files are assembler output kept for convenience.
 | `$F340` | MC68681 DUART, port A (console) |
 | `$F280` | 4K page register, write only (a read latches the data bus); block 14 at reset |
 | `$E000`–`$EFFF` | 4K paging window onto any of the 128 RAM blocks |
+| `$9C00`–`$BFFF` | Microsoft Extended BASIC, if added to the ROM (not included; see [docs/basic-port.md](docs/basic-port.md)) |
+| `$FFF0` | Monitor entry vector (the 6809's unused reserved vector), used by BASIC's `MONITOR` and `FLEX` commands |
 
 Software entry points and load addresses (for example `Flex_BIOS` at `$F800`
 with its disk vector table at `$DE00`, the RTC sync routine at `$FB00`, and the
@@ -59,9 +63,9 @@ a TL866 programmer to burn the ROM.
 ## Building and burning the ROM image
 
 The ROM image is 32 KB and sits at `$8000`-`$FFFF` in the board's memory map,
-so the chip's own addresses are the board's minus `$8000`. The programmed
-image (`rom-images/Monolithic-Flex-Assist09-BIOS-Format-Loader_v6`) is made
-from eight Intel hex files that never overlap:
+so the chip's own addresses are the board's minus `$8000`. The image
+(`rom-images/Monolithic-Flex-Assist09-BIOS-Format-Loader_v7`) is made from
+eight Intel hex files that never overlap:
 
 | File | Contents | Address |
 |---|---|---|
@@ -94,16 +98,30 @@ With more than one file, or a non-zero base, A09Studio merges the files with
 file so that it overlaps another, the merge will fail rather than silently
 overwrite.
 
-The merged result matches the v6 image in `rom-images/` byte for byte.
+The merged result matches the v7 image in `rom-images/` byte for byte.
+
+To include Microsoft Extended BASIC, add the BASIC hex file you have built as
+a ninth file (`$9C00`-`$BFEA`). It is not part of this repository; see
+[docs/basic-port.md](docs/basic-port.md) for how to make it from Grant
+Searle's source. Without it, the board starts in the monitor as before.
+
+The v6 image is kept for reference. Its monitor always starts in Assist09 and
+has no `$FFF0` entry vector.
 
 ## Bring-up order
 
-1. Burn the ROM image (`rom-images/`) and check the monitor prompt on the serial console.
+1. Burn the ROM image (`rom-images/`) and check the monitor prompt on the serial console. If you added BASIC, you get the BASIC banner instead; type `MONITOR` to reach the monitor.
 2. Format the CF card with the monitor's `X` command, or send a whole disk image to it with `U` and the Disk Image tool in A09Studio.
 3. Use `K` to set the clock, then boot FLEX with `F`. The monitor sets FLEX's date from the RTC.
 
 The monitor's added commands (`F`, `X`, `U`, `K`) are described in
 [docs/monitor-commands.md](docs/monitor-commands.md).
+
+## Using Microsoft Extended BASIC
+
+With BASIC in the ROM, the board starts in BASIC. `MONITOR` enters Assist09
+(`G 9C00` goes back with the program intact) and `FLEX` boots FLEX the way the
+monitor's `F` command does. See [docs/basic-port.md](docs/basic-port.md).
 
 ## Using TSC Extended BASIC
 

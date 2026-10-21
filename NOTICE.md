@@ -8,7 +8,8 @@ source, to encourage people to build systems around the 6809, and it has
 been freely circulated ever since. I have not found a formal licence text
 for it. The original code remains Motorola's work; the MIT licence in this
 repository covers only the changes made for this board (the FLEX boot
-command, RTC handling, the `K` command and the I/O changes). If you hold
+command, RTC handling, the `K` command, the I/O changes, and the reset check
+for BASIC with its `$FFF0` entry point). If you hold
 better information about its terms, please open an issue.
 
 ## FLEX and TSC software
@@ -24,6 +25,15 @@ TSC Extended BASIC (`XBASIC`) and other TSC utilities are
 not part of this repository and are not covered by its licence. The files here
 that work with FLEX (`Flex_BIOS`, `FlexFormat` and others) are original code
 written to fit FLEX's published interfaces.
+
+## Microsoft Extended BASIC
+
+Microsoft's 6809 Extended BASIC is not included in this repository or in its
+ROM images. `software/docs/basic-port.md` describes changes to Grant Searle's
+port of it, which he derived from the *Color BASIC Unravelled II* and
+*Extended BASIC Unravelled II* listings; his source is available from his own
+site. The BASIC code remains Microsoft's, and the monitor support for it
+(`BOOT` and `MONENT`) is the only part covered by this repository's licence.
 
 ## Tools
 

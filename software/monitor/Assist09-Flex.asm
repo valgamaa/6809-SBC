@@ -249,6 +249,9 @@ RESET   LEAS    STACK,PCR       ; SETUP INITIAL STACK
 * FIRST STEP IS TO MOVE THE CONTENTS OF THE ROM INTO RAM, AND THEN 
 * DISABLE THE ROM. DONE IN TWO STEPS TO AVOID THE IO SPACE
 *****************************************************
+        BSR     COPYOFF         ; $E03C: MONITOR ENTRY USED BY FLEX MON AND RTC_SET
+        BRA     RESET2          ; GO TO THE MONITOR
+COPYOFF EQU     *               ; COPY ROM TO RAM, SWITCH ROM OFF, MASK RTC INTERRUPT
         LDA		#$0E			; SET THE 4K PAGE REGISTER
         STA		$F280
 		LDY		#$8000			; BASE ADDRESS OF SOURCE/DESTINATION AREA 
@@ -269,6 +272,7 @@ COPY2	LDA		,Y				; GET NEXT BYTE FROM SOURCE
         STA		$F34E
         LDA     #$01            ; MASK THE RTC INTERRUPT OUTPUT (CE REGISTER) SO IT CAN'T
         STA     $F23E           ; FIRE UNTIL F ARMS IT (SEE ASSIST09_FLEX_RTC.ASM)
+        RTS
 *****************************************************
 
 RESET2  CLRA                    ; ISSUE STARTUP MESSAGE
@@ -1859,6 +1863,39 @@ CONV2
 *            DEFAULT INTERRUPT TRANSFERS           *
 ****************************************************
 RSRVD   JMP     [VECTAB+.RSVD,PCR]      ; RESERVED VECTOR
+
+*****************************************************
+* BOOT - HARDWARE RESET ENTRY: COPY ROM TO RAM, SET UP THE
+* CONSOLE AND START EXTENDED BASIC AT $9C00 IF IT IS IN THE ROM,
+* OTHERWISE ENTER ASSIST09 AS BEFORE (SEE DOCS/BASIC-PORT.MD)
+*****************************************************
+BOOT    LEAS    STACK,PCR       ; SETUP INITIAL STACK
+        LBSR    BLDVTR          ; BUILD VECTOR TABLE
+        LBSR    COPYOFF         ; ROM TO RAM, ROM OFF, RTC INTERRUPT MASKED
+        LBSR    SERINIT         ; SET UP THE 68681 CONSOLE PORT
+        LDA     $9C00           ; BASIC PRESENT? (IT STARTS WITH JMP = $7E)
+        CMPA    #$7E
+        LBNE    RESET2          ; NO - START ASSIST09 AS BEFORE
+        CLRA                    ; BASIC EXPECTS DIRECT PAGE ZERO
+        TFR     A,DP
+        JMP     $9C00           ; START BASIC
+
+*****************************************************
+* MONENT - ENTRY FROM BASIC VIA JMP [$FFF0]. REBUILDS THE
+* WORK PAGE (BASIC MAY HAVE OVERWRITTEN IT). A='F' BOOTS
+* FLEX AS THE F COMMAND DOES, ANYTHING ELSE ENTERS ASSIST09.
+*****************************************************
+MONENT  LEAS    STACK,PCR       ; SETUP INITIAL STACK
+        PSHS    A               ; SAVE THE REQUEST
+        LBSR    BLDVTR          ; REBUILD VECTOR TABLE
+        PULS    A
+        CMPA    #'F             ; ? BOOT FLEX
+        LBNE    RESET2          ; NO - ENTER THE MONITOR
+        JSR     $FB00           ; RTCSYNC: SET FLEX DATE, ARM 1-MINUTE INTERRUPT
+        ORCC    #$50            ; INTERRUPTS MASKED, AS AFTER THE F COMMAND
+        CLRA
+        TFR     A,DP
+        JMP     $CD00           ; FLEX COLD START
 SWI3    JMP     [VECTAB+.SWI3,PCR]      ; SWI3 VECTOR
 SWI2    JMP     [VECTAB+.SWI2,PCR]      ; SWI2 VECTOR
 FIRQ    JMP     [VECTAB+.FIRQ,PCR]      ; FIRQ VECTOR
@@ -1872,11 +1909,11 @@ NMI     JMP     [VECTAB+.NMI,PCR]       ; NMI VECTOR
 * THE MC6809 HARDWARE VECTORS.
 ******************************************************
         ORG     ROMBEG+ROMSIZ-16 ; SETUP HARDWARE VECTORS
-        FDB     RSRVD           ; RESERVED SLOT
+        FDB     MONENT          ; RESERVED SLOT - USED AS MONITOR ENTRY FROM BASIC
         FDB     SWI3            ; SOFTWARE INTERRUPT 3
         FDB     SWI2            ; SOFTWARE INTERRUPT 2
         FDB     FIRQ            ; FAST INTERRUPT REQUEST
         FDB     IRQ             ; INTERRUPT REQUEST
         FDB     SWI             ; SOFTWARE INTERRUPT
         FDB     NMI             ; NON-MASKABLE INTERRUPT
-        FDB     RESET           ; RESTART
+        FDB     BOOT            ; RESTART - STRAIGHT INTO BASIC
