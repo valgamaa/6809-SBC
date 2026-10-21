@@ -26,6 +26,7 @@ guard digits absorb the truncation errors.
 | 3 | `PI_V3.bas`, `PIMATH_V3.asm` | BASIC + machine-code divide and add/subtract | 0:25 | 7:45 |
 | 4 | `PI_V4.bas`, `PIMATH_V4.asm` | BASIC + fast 16-bit divide path | ≈ 0:25 (est.) | 6:00 |
 | 5 | `PI.asm`, `PI.CMD` | Native FLEX command, all machine code | ≈ 0:02 (est.) | 2:20 |
+| 5a | `PI.asm`, `PI.CMD` | As 5, dividing by 25 as ×4 and a two-digit shift | ≈ 0:01 (est.) | 1:58 (3:56 on a 1 MHz board) |
 
 Times are on the 2 MHz board. Estimates come from emulator statement and
 cycle counts at 610 BASIC statements per second and 2 million cycles per
@@ -36,6 +37,28 @@ and call it through XBASIC's `USR` function, so the `.asm` files are there
 for reference and for rebuilding the DATA lines. The parameter block is at
 `$C100` in FLEX's utility area, and the USR vector at `$BFFD` assumes
 MEMEND = `$BFFF`.
+
+Version 5a is the current `PI.asm` and `PI.CMD`. The PDF describes
+version 5, before this change.
+
+## Dividing by 25 as a multiply by 4
+
+Because the digits are held in decimal, P/25 can be worked out as 4P/100:
+multiply every digit by 4 (with carry), then move the result two places
+along, which is all that dividing by 100 means in decimal. The answer is
+exactly the same, digit for digit, as dividing by 25, but a multiply by 4
+is two shifts and a table look-up instead of a trial division. In `PI.asm`
+the routine `DIV25` does this, taking 67 cycles per digit against 212 for
+the divide. Only the 1/5 series benefits (1/57121 has no such shortcut), so
+the whole program is about 19% faster.
+
+The BASIC versions still use the divide, since they are there to show the
+method step by step. To try the idea in `PI_V1.bas`, replace the call that
+forms the next power term (lines 7170–7200) with a loop over the digits
+from N−1 down to F that multiplies each one by 4, adds the carry, keeps the
+units digit, carries the tens, and writes the digit two places further on
+(index I+2, dropping anything past N−1). The final carry goes to digit
+F+1 and digit F becomes 0. F1, the first non-zero digit, is then F+1 or F+2.
 
 ## Running PI.CMD
 

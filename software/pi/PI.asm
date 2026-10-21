@@ -185,9 +185,13 @@ AT1     LDD     FF              DONE WHEN P IS ALL ZERO
         STD     SRC
         STD     DST
         LDD     X2
-        STD     VV
+        CMPD    #25             DIVIDING BY 25?
+        BNE     AT2
+        JSR     DIV25           YES - MULTIPLY BY 4 AND SHIFT
+        BRA     AT3
+AT2     STD     VV
         JSR     DIVIDE
-        LDD     RES             FIRST NON-ZERO DIGIT
+AT3     LDD     RES             FIRST NON-ZERO DIGIT
         STD     FF
 *
         LDD     MM              NEXT TERM
@@ -333,6 +337,141 @@ PP2     LEAY    -1,Y
         PULS    X,Y
         BRA     PP1
 PPDONE  RTS
+
+*******************************************************
+* DIV25 - SRC(F..N-1) = SRC(F..N-1) / 25, IN PLACE, RETURNS F1 IN RES
+*
+* P/25 = 4P/100, AND IN DECIMAL DIVIDING BY 100 IS A SHIFT OF TWO
+* PLACES. SO EACH DIGIT IS MULTIPLIED BY 4 (WITH CARRY), WORKING
+* FROM DIGIT N-1 DOWN TO F, AND WRITTEN TWO PLACES FURTHER ON.
+* THE RESULT IS EXACTLY WHAT DIVIDE GIVES, BUT ABOUT 3 TIMES FASTER.
+* THE FIRST TWO PRODUCTS FALL OFF THE END (TRUNCATION), THE FINAL
+* CARRY GOES TO DIGIT F+1 AND DIGIT F BECOMES ZERO.
+*
+* THE WRITE IS ALWAYS TWO BYTES ABOVE THE READ, SO ONE POINTER AND
+* ONE MAPPED BLOCK SERVE BOTH, EXCEPT WHEN THE READ IS IN THE TOP
+* TWO BYTES OF A BLOCK AND THE WRITE LANDS IN THE NEXT BLOCK.
+* X = READ POINTER, Y = DIGITS LEFT, U = TABLE, CY = CARRY.
+DIV25   PSHS    D,X,Y,U
+        CLR     CY
+        LDD     NN              Y = N - F DIGITS TO READ
+        SUBD    FF
+        LBLS    D25X            NOTHING TO DO IF N <= F
+        TFR     D,Y
+        LDD     NN              START READING AT N-1
+        SUBD    #1
+        JSR     SETPTR          X = ADDRESS, SBLK MAPPED
+*
+* THE FIRST TWO PRODUCTS ARE WORKED OUT FOR THEIR CARRY ONLY
+        LDA     #2
+        STA     SKIP
+D25P    LDA     ,X
+        ASLA
+        ASLA
+        ADDA    CY
+        LDU     #D10TAB+40      ONLY THE CARRY IS NEEDED
+        LDA     A,U
+        STA     CY
+        LEAX    -1,X
+        CMPX    #WINDOW-1
+        BNE     D25Q
+        LDX     #WINEND-1
+        DEC     SBLK
+        LDA     SBLK
+        STA     PAGREG
+D25Q    LEAY    -1,Y
+        BEQ     D25E            RAN OUT DURING THE FIRST TWO
+        DEC     SKIP
+        BNE     D25P
+*
+* MAIN LOOP
+D25L    LDA     ,X              DIGIT * 4 + CARRY (0-39)
+        ASLA
+        ASLA
+        ADDA    CY
+        LDU     #D10TAB         SPLIT INTO DIGIT AND CARRY BY TABLE
+        LEAU    A,U
+        LDA     40,U            NEW CARRY
+        STA     CY
+        LDB     ,U              NEW DIGIT
+        CMPX    #WINEND-2       WRITE IN THE NEXT BLOCK?
+        BHS     D25N
+        STB     2,X             NO - TWO PLACES ON
+D25A    LEAX    -1,X            STEP THE READ POINTER DOWN
+        CMPX    #WINDOW-1
+        BEQ     D25W
+D25B    LEAY    -1,Y
+        BNE     D25L
+        BRA     D25E
+*
+D25N    LDA     SBLK            WRITE INTO THE NEXT BLOCK UP
+        INCA
+        STA     PAGREG
+        STB     2-4096,X
+        LDA     SBLK
+        STA     PAGREG
+        BRA     D25A
+*
+D25W    LDX     #WINEND-1       READ POINTER INTO THE BLOCK BELOW
+        DEC     SBLK
+        LDA     SBLK
+        STA     PAGREG
+        BRA     D25B
+*
+* THE TOP TWO DIGITS: CARRY TO F+1 (IF F+1 < N), ZERO TO F
+D25E    LDD     NN
+        SUBD    FF
+        CMPD    #2
+        BLO     D25F            ONLY ONE DIGIT - THE CARRY FALLS OFF
+        LDD     FF
+        ADDD    #1
+        JSR     SETPTR
+        LDB     CY
+        STB     ,X
+D25F    LDD     FF
+        JSR     SETPTR
+        CLR     ,X              (RAM, NOT A DEVICE REGISTER)
+*
+* FIND THE FIRST NON-ZERO DIGIT FROM F UPWARDS (AT F+1 OR F+2)
+        LDD     FF
+        STD     IDX
+D25G    LDD     IDX
+        CMPD    NN
+        BHS     D25H            ALL ZERO - RES = N
+        JSR     SETPTR
+        TST     ,X
+        BNE     D25H
+        LDD     IDX
+        ADDD    #1
+        STD     IDX
+        BRA     D25G
+D25H    LDD     IDX
+        STD     RES
+D25X    LDA     #NATIVE         RESTORE NATIVE BLOCK
+        STA     PAGREG
+        PULS    D,X,Y,U,PC
+
+* SETPTR - MAP THE BLOCK HOLDING DIGIT D OF BUFFER SRC.
+* RETURNS X = ITS ADDRESS IN THE WINDOW, SBLK = THE BLOCK.
+SETPTR  PSHS    D
+        LSRA
+        LSRA
+        LSRA
+        LSRA
+        ADDA    SRC+1
+        STA     SBLK
+        STA     PAGREG
+        PULS    D
+        ANDA    #$0F
+        ADDD    #WINDOW
+        TFR     D,X
+        RTS
+
+* D10TAB - FOR 0-39: THE UNITS DIGIT, THEN 40 BYTES LATER THE TENS
+D10TAB  FCB     0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9
+        FCB     0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9
+        FCB     0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1
+        FCB     2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3
 
 *******************************************************
 * DIVIDE - DST(F..N-1) = SRC(F..N-1) / V, RETURNS F1 IN RES
@@ -713,5 +852,6 @@ IDX     RMB     2               WORKING DIGIT INDEX
 V5      RMB     2               5 * V FOR THE FAST PATH
 TT2     RMB     2               R * 10 TEMPORARY
 RR2     RMB     2               SAVED REMAINDER
+SKIP    RMB     1               DIV25: PRODUCTS STILL TO DROP
 
         END     START
