@@ -25,6 +25,7 @@ FLEX disk images are in the companion project,
 | `rom-images/` | The ROM image (v7, without BASIC) as `.bin` and `.hex`, the previous v6 image, and `FLEX-core.hex` — the FLEX part of the image, used to rebuild it |
 | `des/` | `DESFILE` — encrypts and decrypts FLEX text files with the MC6859 DES chip, as a TSC XBASIC program and as a native FLEX command — see [des/README.md](des/README.md) |
 | `pi/` | π by Machin's formula, in five versions from pure TSC XBASIC to a native FLEX command (`PI.CMD`), with a [PDF](pi/Pi_6809_Progression.pdf) explaining each step and its timing — see [pi/README.md](pi/README.md) |
+| `basic/` | `BasicSBC.asm` — the board's additions to Microsoft Extended BASIC: `MONITOR`, `FLEX`, an unsigned `MEM`, and the FLEX disk commands `CAT`, `CATW`, `LOAD`, `SAVE` and `DELETE`. BASIC itself is not included; see [docs/basic-port.md](docs/basic-port.md) |
 | `docs/` | `monitor-commands.md` / [PDF](docs/monitor-commands.pdf) (the added commands), `basic-port.md` (adding Microsoft Extended BASIC to the ROM), `xbasic-patching.md`, and a spreadsheet of the added commands |
 
 Each source file has a header comment saying what it does and where it lives
@@ -41,6 +42,7 @@ in memory. The `.hex` / `.s19` files are assembler output kept for convenience.
 | `$F340` | MC68681 DUART, port A (console) |
 | `$F280` | 4K page register, write only (a read latches the data bus); block 14 at reset |
 | `$E000`–`$EFFF` | 4K paging window onto any of the 128 RAM blocks |
+| `$9000`–`$9BFF` | `basic/BasicSBC.asm` and its sector buffers, if BASIC is added to the ROM |
 | `$9C00`–`$BFFF` | Microsoft Extended BASIC, if added to the ROM (not included; see [docs/basic-port.md](docs/basic-port.md)) |
 | `$FFF0` | Monitor entry vector (the 6809's unused reserved vector), used by BASIC's `MONITOR` and `FLEX` commands |
 
@@ -101,7 +103,7 @@ overwrite.
 The merged result matches the v7 image in `rom-images/` byte for byte.
 
 To include Microsoft Extended BASIC, add the BASIC hex file you have built as
-a ninth file (`$9C00`-`$BFF3`). It is not part of this repository; see
+a ninth file (`$9000`-`$9849` and `$9C00`-`$BFF0`). It is not part of this repository; see
 [docs/basic-port.md](docs/basic-port.md) for how to make it from Grant
 Searle's source. Without it, the board starts in the monitor as before.
 
@@ -121,7 +123,9 @@ The monitor's added commands (`F`, `X`, `U`, `K`) are described in
 
 With BASIC in the ROM, the board starts in BASIC. `MONITOR` enters Assist09
 (`G 9C00` goes back with the program intact) and `FLEX` boots FLEX the way the
-monitor's `F` command does. See [docs/basic-port.md](docs/basic-port.md).
+monitor's `F` command does. `CAT`, `CATW`, `LOAD`, `SAVE` and `DELETE` work with
+programs on the FLEX disks, stored as FLEX text files. See
+[docs/basic-port.md](docs/basic-port.md).
 
 ## Using TSC Extended BASIC
 

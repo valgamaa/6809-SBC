@@ -32,8 +32,11 @@ Microsoft's 6809 Extended BASIC is not included in this repository or in its
 ROM images. `software/docs/basic-port.md` describes changes to Grant Searle's
 port of it, which he derived from the *Color BASIC Unravelled II* and
 *Extended BASIC Unravelled II* listings; his source is available from his own
-site. The BASIC code remains Microsoft's, and the monitor support for it
-(`BOOT` and `MONENT`) is the only part covered by this repository's licence.
+site. The BASIC code remains Microsoft's. The parts covered by this
+repository's licence are the monitor support for it (`BOOT` and `MONENT`) and
+`software/basic/BasicSBC.asm`, which is original code that BASIC includes:
+the `MONITOR` and `FLEX` commands, `MEM`, and the disk commands. It refers to
+BASIC's routines by their labels but contains none of Microsoft's code.
 
 ## Tools
 

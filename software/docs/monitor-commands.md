@@ -71,7 +71,7 @@ repository; see [basic-port.md](basic-port.md).
 ## Notes
 
 - The formatter, loader and clock program sit in ROM above or away from user
-  RAM, so `$0000`–`$BFFF` stays free (`$0000`–`$9BFF` if BASIC is in the ROM).
+  RAM, so `$0000`–`$BFFF` stays free (`$0000`–`$8FFF` if BASIC is in the ROM).
   The clock program at `$C000` is restored from the ROM image on every reset.
 - The monitor masks the RTC interrupt at reset, so a cold power-up can't fire
   it before `F` has installed the handler.
